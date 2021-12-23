@@ -1,25 +1,19 @@
 // Libraries
 #include <NintendoExtensionCtrl.h>
-#include <HID_Buttons.h>
 
-// Keyboard Buttons
+// Joystick
 const int JoyCenter = 128;   // 255 / 2
 const int JoyDeadzone = 50;  // +/- area around the center to ignore
 
-KeyboardButton moveForward('w');
-KeyboardButton moveLeft('a');
-KeyboardButton moveBackward('s');
-KeyboardButton moveRight('d');
+//Map axes to axes
 
+//Digital actions
 KeyboardButton jump(' ');
 KeyboardButton use('e');
-
-// Mouse Buttons
 MouseButton fire(MOUSE_LEFT);
 
-// Nunchuks
-Nunchuk leftNchuk(Wire);
-Nunchuk rightNchuk(Wire1);
+// Nunchuk
+Nunchuk Nchuk(Wire);
 
 // Program Data
 uint8_t xCenter = 0;
@@ -28,32 +22,28 @@ boolean weaponSwitched = false;
 
 void setup() {
     // I2C Init
-    leftNchuk.begin();
-    rightNchuk.begin();
-
-    leftNchuk.i2c().setClock(400000);
-    rightNchuk.i2c().setClock(400000);
-
-    boolean leftConnected = false;
-    boolean rightConnected = false;
-
-    while (!(leftConnected && rightConnected)) {
-        if (!leftConnected)  { leftConnected  = leftNchuk.connect(); }
-        if (!rightConnected) { rightConnected = rightNchuk.connect(); }
+    Nchuk.begin();
+    
+    //What clock rate is needed?
+    Nchuk.i2c().setClock(400000);
+    
+    boolean Connected = false;
+   
+    while (!(Connected)) {
+        Nchuk.connect();
     }
 
-    xCenter = rightNchuk.joyX();
-    yCenter = rightNchuk.joyY();
+    xCenter = Nchuk.joyX();
+    yCenter = Nchuk.joyY();
 }
 
 void loop() {
-    boolean leftReady = leftNchuk.update();
-    boolean rightReady = rightNchuk.update();
+    boolean Ready = Nchuk.update();
 
-    if (leftReady) {
+    if (Ready) {
         // WASD
-        uint8_t x = leftNchuk.joyX();
-        uint8_t y = leftNchuk.joyY();
+        uint8_t x = Nchuk.joyX();
+        uint8_t y = Nchuk.joyY();
 
         moveLeft.set(x < JoyCenter - JoyDeadzone);
         moveRight.set(x > JoyCenter + JoyDeadzone);
@@ -62,31 +52,27 @@ void loop() {
         moveBackward.set(y < JoyCenter - JoyDeadzone);
 
         // Jump
-        jump.set(leftNchuk.buttonZ());
+        jump.set(Nchuk.buttonZ());
 
         // Use / Buy
-        use.set(leftNchuk.buttonC());
+        use.set(Nchuk.buttonC());
 
-    }
-
-    if (rightReady) {
         // Aiming
-        int16_t x = ((int16_t) rightNchuk.joyX() - (int16_t) xCenter) / 4;
-        int16_t y = ((int16_t) rightNchuk.joyY() - (int16_t) yCenter) / 4;
+        int16_t x = ((int16_t) Nchuk.joyX() - (int16_t) xCenter) / 4;
+        int16_t y = ((int16_t) Nchuk.joyY() - (int16_t) yCenter) / 4;
         Mouse.move(x, -y);
 
         // Fire
-        fire.set(rightNchuk.buttonZ());
+        fire.set(Nchuk.buttonZ());
 
         // Next Weapon
-        if (rightNchuk.buttonC()) {
+        if (Nchuk.buttonC()) {
             if (!weaponSwitched) {
                 Mouse.move(0, 0, 1);  // Scroll up
             }
-            weaponSwitched = true;
+            weaponSwitched = !weaponSwitched;
         }
-        else {
-            weaponSwitched = false;
-        }
+        
+        // Reload
     }
 }
