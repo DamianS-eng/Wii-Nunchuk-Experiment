@@ -1,16 +1,14 @@
 // Libraries
 #include <NintendoExtensionCtrl.h>
+#include "HID-Project.h"
+
+//Pinout
+const int pinLed = LED_BUILTIN;
+const int resetButton = 2;
 
 // Joystick
-const int JoyCenter = 128;   // 255 / 2
+int Joyx-Max = 0, Joyx+Max = 0, Joyy-Min = 0, Joyy-Max = 0;
 const int JoyDeadzone = 50;  // +/- area around the center to ignore
-
-//Map axes to axes
-
-//Digital actions
-KeyboardButton jump(' ');
-KeyboardButton use('e');
-MouseButton fire(MOUSE_LEFT);
 
 // Nunchuk
 Nunchuk Nchuk(Wire);
@@ -19,60 +17,64 @@ Nunchuk Nchuk(Wire);
 uint8_t xCenter = 0;
 uint8_t yCenter = 0;
 boolean weaponSwitched = false;
+boolean upLeft = true;
+uint8_t buttonArray[32] = {
+    "c",
+    "z",
+    "0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0","0"
+};
 
 void setup() {
-    // I2C Init
-    Nchuk.begin();
-    
-    //What clock rate is needed?
-    Nchuk.i2c().setClock(400000);
-    
-    boolean Connected = false;
-   
-    while (!(Connected)) {
-        Nchuk.connect();
-    }
+  
+  pinMode(pinLed, OUTPUT);
+  pinMode(resetButton, INPUT_PULLUP);
 
-    xCenter = Nchuk.joyX();
-    yCenter = Nchuk.joyY();
+  // Sends a clean report to the host. This is important on any Arduino type.
+  Gamepad.begin();
+
+  // I2C Init
+  Nchuk.begin();
+    
+  //What clock rate is needed?
+  Nchuk.i2c().setClock(400000);
+   
+  while (!Nchuk.connect()) {
+	//wait for connection...
+	delay(1000);
+	}
+
+  xCenter = Nchuk.joyX();
+  yCenter = Nchuk.joyY();
+}
+
+void reset() {
+    digitalWrite(pinLed, HIGH);
+    Gamepad.releaseAll();
+    delay(1000);
+    digitalWrite(pinLed, LOW);
+}
+
+int16_t maxRange(int16_t inputRange, int16_t farthest) {
+    if (inputRange > farthest) {
+        return inputRange;
+    }
+    return farthest;
 }
 
 void loop() {
-    boolean Ready = Nchuk.update();
-
-    if (Ready) {
-        // WASD
-        uint8_t x = Nchuk.joyX();
-        uint8_t y = Nchuk.joyY();
-
-        moveLeft.set(x < JoyCenter - JoyDeadzone);
-        moveRight.set(x > JoyCenter + JoyDeadzone);
-
-        moveForward.set(y > JoyCenter + JoyDeadzone);
-        moveBackward.set(y < JoyCenter - JoyDeadzone);
-
-        // Jump
-        jump.set(Nchuk.buttonZ());
-
-        // Use / Buy
-        use.set(Nchuk.buttonC());
-
-        // Aiming
-        int16_t x = ((int16_t) Nchuk.joyX() - (int16_t) xCenter) / 4;
-        int16_t y = ((int16_t) Nchuk.joyY() - (int16_t) yCenter) / 4;
-        Mouse.move(x, -y);
-
-        // Fire
-        fire.set(Nchuk.buttonZ());
-
-        // Next Weapon
-        if (Nchuk.buttonC()) {
-            if (!weaponSwitched) {
-                Mouse.move(0, 0, 1);  // Scroll up
-            }
-            weaponSwitched = !weaponSwitched;
-        }
-        
-        // Reload
+    if (digitalRead(resetButton)) {
+        reset();
     }
+    if (Nchuk.update()) {
+        // move
+        //note to check for range, then set xAxis to proportion of farthest reported ranges
+        Gamepad.xAxis(Nchuk.joyX());
+        Gamepad.yAxis(Nchuk.joyY());
+
+       //  press button
+    
+        Nchuk.buttonZ() ? Gamepad.press(1) : Gamepad.release(1);
+        Nchuk.buttonC() ? Gamepad.press(2) : Gamepad.release(2);
+    }
+    Gamepad.write();
 }
