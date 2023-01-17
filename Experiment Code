@@ -10,8 +10,7 @@ const int resetButton = 2;
 int Joyx-Max = 0, Joyx+Max = 0, Joyy-Min = 0, Joyy-Max = 0;
 const int JoyDeadzone = 50;  // +/- area around the center to ignore
 
-// Nunchuk
-Nunchuk Nchuk(Wire);
+ExtensionPort controller;
 
 // Program Data
 uint8_t xCenter = 0;
@@ -31,20 +30,54 @@ void setup() {
 
   // Sends a clean report to the host. This is important on any Arduino type.
   Gamepad.begin();
-
-  // I2C Init
-  Nchuk.begin();
     
   //What clock rate is needed?
-  Nchuk.i2c().setClock(400000);
+  controller.i2c().setClock(400000);
    
-  while (!Nchuk.connect()) {
+  while (!controller.connect()) {
 	//wait for connection...
 	delay(1000);
 	}
 
-  xCenter = Nchuk.joyX();
-  yCenter = Nchuk.joyY();
+  xCenter = controller.joyX();
+  yCenter = controller.joyY();
+
+	controller.begin();
+	controller.connect();
+
+	ExtensionType conType = controller.getControllerType();
+
+	switch (conType) {
+		case(ExtensionType::NoController):
+			//No controller detected
+			break;
+		case(ExtensionType::UnknownController):
+			//Unknown controller connected
+			break;
+		case(ExtensionType::Nunchuk):
+			//Nunchuk connected!
+			break;
+		case(ExtensionType::ClassicController):
+			//Classic Controller connected!
+			break;
+		case(ExtensionType::GuitarController):
+			//Guitar controller connected!
+			break;
+		case(ExtensionType::DrumController):
+			//Drum set controller connected!
+			break;
+		case(ExtensionType::DJTurntableController):
+			//DJ turntable connected!
+			break;
+		case(ExtensionType::uDrawTablet):
+			//uDraw Tablet connected!
+			break;
+		case(ExtensionType::DrawsomeTablet):
+			//Drawsome Tablet connected!
+			break;
+		default: break;
+	}
+
 }
 
 void reset() {
@@ -65,16 +98,16 @@ void loop() {
     if (digitalRead(resetButton)) {
         reset();
     }
-    if (Nchuk.update()) {
+    if (controller.update()) {
         // move
         //note to check for range, then set xAxis to proportion of farthest reported ranges
-        Gamepad.xAxis(Nchuk.joyX());
-        Gamepad.yAxis(Nchuk.joyY());
+        Gamepad.xAxis(controller.joyX());
+        Gamepad.yAxis(controller.joyY());
 
        //  press button
     
-        Nchuk.buttonZ() ? Gamepad.press(1) : Gamepad.release(1);
-        Nchuk.buttonC() ? Gamepad.press(2) : Gamepad.release(2);
+        controller.buttonZ() ? Gamepad.press(1) : Gamepad.release(1);
+        controller.buttonC() ? Gamepad.press(2) : Gamepad.release(2);
     }
     Gamepad.write();
 }
